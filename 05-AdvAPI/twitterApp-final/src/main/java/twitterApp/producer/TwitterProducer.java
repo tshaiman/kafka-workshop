@@ -35,6 +35,7 @@ public class TwitterProducer {
         logger.info("Start polling tweets");
 
 
+
         while(!twitterClient.isDone() && counter.get() < 1000){
             String tweet = null;
             try {
