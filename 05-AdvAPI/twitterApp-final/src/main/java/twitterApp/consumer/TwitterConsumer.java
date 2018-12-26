@@ -34,7 +34,7 @@ public class TwitterConsumer {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         logger = LoggerFactory.getLogger("ElasticWriter");
-        client = createClient();
+        client = ElasticClient.createClient();
         KafkaConsumer<String,String> consumer = buildConsumer();
 
         while(true) {
@@ -116,19 +116,5 @@ public class TwitterConsumer {
         return consumer;
     }
 
-    public static RestHighLevelClient createClient(){
-        String hostname = "host";
-        String username = "";
-        String password = "";
 
-
-        final CredentialsProvider credProvider = new BasicCredentialsProvider();
-        credProvider.setCredentials(AuthScope.ANY,new UsernamePasswordCredentials(username,password));
-
-        RestClientBuilder builder = RestClient.builder(
-                new HttpHost(hostname,443,"https"))
-                .setHttpClientConfigCallback(httpAsyncClientBuilder ->
-                        httpAsyncClientBuilder.setDefaultCredentialsProvider(credProvider));
-        return new RestHighLevelClient(builder);
-    }
 }

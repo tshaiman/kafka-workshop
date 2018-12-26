@@ -26,13 +26,16 @@ public class FavouriteColourApp {
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        // Set the commit interval to 500ms so that any changes are flushed frequently. The low latency
+        // would be important for anomaly detection.
+        config.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 500);
 
         // we disable the cache to demonstrate all the "steps" involved in the transformation - not recommended in prod
         config.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, "0");
 
         StreamsBuilder builder = new StreamsBuilder();
         // Step 1: We create the topic of users keys to colours
-        KStream<String, String> textLines = builder.stream("favourite-colour-input");
+        KStream<String, String> textLines = builder.stream("fav-color-in");
 
         KStream<String, String> usersAndColours = textLines
                 // 1 - we ensure that a comma is here as we will split on it
@@ -44,10 +47,10 @@ public class FavouriteColourApp {
                 // 4 - we filter undesired colours (could be a data sanitization step
                 .filter((user, colour) -> Arrays.asList("green", "blue", "red").contains(colour));
 
-        usersAndColours.to("user-keys-and-colours");
+        usersAndColours.to("user-colors");
 
         // step 2 - we read that topic as a KTable so that updates are read correctly
-        KTable<String, String> usersAndColoursTable = builder.table("user-keys-and-colours");
+        KTable<String, String> usersAndColoursTable = builder.table("user-colors");
 
         // step 3 - we count the occurences of colours
         KTable<String, Long> favouriteColours = usersAndColoursTable
@@ -56,7 +59,7 @@ public class FavouriteColourApp {
                 .count();
 
         // 6 - we output the results to a Kafka Topic - don't forget the serializers
-        favouriteColours.toStream().to("favourite-colour-output", Produced.with(Serdes.String(),Serdes.Long()));
+        favouriteColours.toStream().to("fav-color-out", Produced.with(Serdes.String(),Serdes.Long()));
 
         KafkaStreams streams = new KafkaStreams(builder.build(), config);
         // only do this in dev - not in prod
