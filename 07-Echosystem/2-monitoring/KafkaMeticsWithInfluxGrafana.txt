@@ -1,0 +1,81 @@
+/////////////////////////////////
+//GUIDE Source :
+https://softwaremill.com/monitoring-apache-kafka-with-influxdb-grafana/
+/////////////////////////////////
+
+
+=====Graphana / InfluxDb / JVM ===============
+
+1. Create Network for monitoring
+docker network create monitoring-network
+
+
+2. Run influx DB :
+
+docker run -d -p 8083:8083 -p 8086:8086 \
+--net monitoring-network  \
+    --name influxdb  \
+    influxdb:0.13.0
+
+3. Create Db in InfluxDb for Kafka JVM
+$ curl -POST http://127.0.0.1:8086/query --data-urlencode "q=CREATE DATABASE kafka"
+
+4. Add Graphana docker
+$ docker run -d -p 3000:3000 --net monitoring-network --name grafana grafana/grafana:3.1.0
+
+
+5. attached influxDb as source to Graphana
+curl 'http://admin:admin@127.0.0.1:3000/api/datasources' -X POST \
+-H 'Content-Type: application/json;charset=UTF-8' \
+--data-binary '{"name":"influx","type":"influxdb","url":"http://127.0.0.1:8086",
+"access":"proxy","isDefault":true,"database":"kafka","user":"admin","password":"admin"}'
+
+6. Run Kafka With JMX Port 
+
+7. Configure JMX_TRANS
+
+$ wget http://central.maven.org/maven2/org/jmxtrans/jmxtrans/259/jmxtrans-259-all.jar
+
+$ cat jvm.json
+
+{
+  "servers" : [ {
+    "port" : "55555",
+    "host" : "localhost",
+    "alias": "kafka-1",
+    "queries" : [ {
+      "outputWriters" : [
+      {
+        "@class" : "com.googlecode.jmxtrans.model.output.InfluxDbWriterFactory",
+        "url" : "http://127.0.0.1:8086/",
+        "database" : "kafka",
+        "username" : "admin",
+        "password" : "admin"
+      } ],
+      "obj" : "java.lang:type=Memory",
+      "attr" : [ "HeapMemoryUsage", "NonHeapMemoryUsage" ],
+      "resultAlias" : "jvmMemory"
+    }
+    ],
+    "numQueryThreads" : 1
+  } ]
+}
+
+8. install JMXTrans
+wget -q https://raw.githubusercontent.com/jmxtrans/jmxtrans/master/jmxtrans/jmxtrans.sh
+
+chmod +x jmxtrans.sh
+
+JAR_FILE=jmxtrans-259-all.jar ./jmxtrans.sh start
+
+
+
+9. More Metrics
+
+    $ JMXTRANS_OPTS="-Dport1=55555 -Durl1=localhost -DinfluxUrl=http://127.0.0.1:8086/ -DinfluxDb=kafka -DinfluxUser=admin -DinfluxPwd=admin" \
+        JAR_FILE=jmxtrans-259-all.jar ./jmxtrans.sh start
+
+  9-A : using a build in Graphana dashboard
+  https://github.com/softwaremill/confluent-playground/blob/master/metrics/kafka/ApacheKafkaBrokerMetrics.json
+
+  

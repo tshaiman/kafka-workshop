@@ -1,0 +1,14 @@
+
+1. change your path to have kafka/bin in it :
+===================================================
+# The original version is saved in .bash_profile.pysave
+export KAFKA_HOME=~/kafka
+
+export PATH=$PATH:$KAFKA_HOME/bin
+
+2. add some alias
+=====================
+alias run_zookeeper='$KAFKA_HOME/bin/zookeeper-server-start.sh $KAFKA_HOME/config/zookeeper.properties'
+alias run_kafka='$KAFKA_HOME/bin/kafka-server-start.sh $KAFKA_HOME/config/server.properties'
+
+
